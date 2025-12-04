@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Weather Art Generator</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.7.0/p5.min.js"></script>
+    <!-- p5.js-svg library - using unpkg CDN -->
+    <script src="https://unpkg.com/p5.js-svg@1.5.1/dist/p5.svg.min.js"></script>
+    <script>
+        // Verify p5.SVG loads - check multiple times
+        function checkP5SVG() {
+            if (typeof p5 !== 'undefined') {
+                // Check if p5.SVG is available as a property
+                const hasSVG = typeof p5.SVG !== 'undefined' || 
+                              (typeof window !== 'undefined' && typeof window.SVG !== 'undefined') ||
+                              (typeof SVG !== 'undefined');
+                
+                if (hasSVG) {
+                    console.log('✅ p5.SVG loaded successfully');
+                    console.log('p5.SVG type:', typeof p5.SVG);
+                    console.log('SVG type:', typeof SVG);
+                } else {
+                    console.error('❌ p5.SVG failed to load!');
+                    console.error('p5 available:', typeof p5 !== 'undefined');
+                    console.error('p5.SVG available:', typeof p5.SVG !== 'undefined');
+                    console.error('window.SVG available:', typeof window !== 'undefined' && typeof window.SVG !== 'undefined');
+                    console.error('SVG global available:', typeof SVG !== 'undefined');
+                }
+            } else {
+                console.warn('p5 not loaded yet, will check again...');
+                setTimeout(checkP5SVG, 200);
+            }
+        }
+        
+        window.addEventListener('load', () => {
+            setTimeout(checkP5SVG, 500);
+            setTimeout(checkP5SVG, 1000);
+            setTimeout(checkP5SVG, 2000);
+        });
+    </script>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <video class="bg-video" autoplay muted loop playsinline poster="img/bg-poster.jpg">
+        <source src="vid/sunray-through-clouds.mp4" type="video/mp4">
+    </video>
+
+    <!-- Full-screen dim background shown behind email dialog -->
+    <div id="emailOverlay" class="email-overlay" style="display: none;"></div>
+
+    <div class="marquee marquee-header">
+        <div class="marquee__track">
+            <div class="marquee__content">
+                <span>GALERIE PRINCE TAKAMADO GALLERY</span>
+                <span>カナダ大使館高円宮記念ギャラリー</span>
+                <span>GALERIE PRINCE TAKAMADO GALLERY</span>
+                <span>カナダ大使館高円宮記念ギャラリー</span>
+                <span>GALERIE PRINCE TAKAMADO GALLERY</span>
+                <span>カナダ大使館高円宮記念ギャラリー</span>
+                <span>GALERIE PRINCE TAKAMADO GALLERY</span>
+                <span>カナダ大使館高円宮記念ギャラリー</span>
+            </div>
+            <div class="marquee__content" aria-hidden="true">
+                <span>GALERIE PRINCE TAKAMADO GALLERY</span>
+                <span>カナダ大使館高円宮記念ギャラリー</span>
+                <span>GALERIE PRINCE TAKAMADO GALLERY</span>
+                <span>カナダ大使館高円宮記念ギャラリー</span>
+                <span>GALERIE PRINCE TAKAMADO GALLERY</span>
+                <span>カナダ大使館高円宮記念ギャラリー</span>
+                <span>GALERIE PRINCE TAKAMADO GALLERY</span>
+                <span>カナダ大使館高円宮記念ギャラリー</span>
+            </div>
+        </div>
+    </div>
+    <div class="main-section">
+        <div class="site-logo" id="logoBtn"></div>
+        <div class="header-container">
+            <h1>🌤️ 天候アートジェネレーター</h1>
+            <div class="header-translations">
+                <h2 class="header-en">Weather Art Generator</h2>
+                <span class="header-separator">✿</span>
+                <h2 class="header-fr">Générateur d'Art Météo</h2>
+            </div>
+        </div>
+        <div class="container">
+        <div class="subtitle-grid">
+            <p class="subtitle lang-ja">この展示会限定！オタワと東京の天候にインスパイアされたEEPMONによるユニークなデジタルアート作品を入手しよう。</p>
+            <p class="subtitle lang-en">Exclusive to this exhibition! Own a unique digital artwork by EEPMON, inspired by the weather of Ottawa and Tokyo.</p>
+            <p class="subtitle lang-fr">Exclusif à cette exposition ! Possédez une œuvre d'art numérique unique d'EEPMON, inspirée par le climat d'Ottawa et de Tokyo.</p>
+        </div>
+        
+        <button id="generateBtn" class="btn">生成 | Generate | Générer</button>
+
+        <div class="artwork-section">
+            <div class="weather-sidebar" id="weatherSidebar" style="display: none;">
+                <div class="weather-card" id="ottawaCard">
+                    <h3>🇨🇦 カナダ・オタワ / Ottawa (Canada)</h3>
+                    <div id="ottawaWeather"></div>
+                </div>
+                <div class="weather-card" id="tokyoCard">
+                    <h3>🇯🇵 日本・東京 / Tokyo (Japon)</h3>
+                    <div id="tokyoWeather"></div>
+                </div>
+                <div class="action-buttons" id="actionButtons" style="display: none;">
+                    <button id="generateAgainBtn" class="btn secondary">再生成 | Generate Again | Générer à nouveau</button>
+                    <button id="acceptGiftBtn" class="btn success">受け取る | Accept | Accepter</button>
+                </div>
+            </div>
+            
+            <div id="artwork-container">
+                <div id="artwork-sketch"></div>
+                <div class="loading-overlay" id="loadingOverlay" style="display: none;">
+                    <div class="loading-content">
+                        <div class="spinner"></div>
+                        <p>Fetching weather data and generating artwork...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="message" id="message"></div>
+        </div>
+    </div>
+
+    <!-- Centered email dialog, above overlay and main content -->
+    <div class="email-form" id="emailForm">
+        <h2 class-"subtitle">天気発想のジェネラティブアートを受け取ろう！</h2>
+        <h3 class-"subtitle">Receive Your Weather Inspired Generative Art!<br>
+            Recevez votre œuvre générative inspirée par la météo !</h3>
+        <!--<p>Enter your email to receive your unique generative artwork as an attachment:</p>-->
+        <input type="email" id="emailInput" placeholder="your.email@example.com" required>
+        <button id="submitEmailBtn" class="btn">送信 | Send | Envoyer</button>
+    </div>
+
+    <div class="sponsor-logos">
+        <img src="img/air-canada-logo.svg" alt="Sponsor 1" class="sponsor-logo">
+        <img src="img/canada-goose-logo.svg" alt="Sponsor 2" class="sponsor-logo">
+    </div>
+
+    <div class="marquee">
+        <div class="marquee__track">
+            <div class="marquee__content">
+                <span>GALERIE PRINCE TAKAMADO GALLERY</span>
+                <span>カナダ大使館高円宮記念ギャラリー</span>
+                <span>GALERIE PRINCE TAKAMADO GALLERY</span>
+                <span>カナダ大使館高円宮記念ギャラリー</span>
+                <span>GALERIE PRINCE TAKAMADO GALLERY</span>
+                <span>カナダ大使館高円宮記念ギャラリー</span>
+                <span>GALERIE PRINCE TAKAMADO GALLERY</span>
+                <span>カナダ大使館高円宮記念ギャラリー</span>
+            </div>
+            <div class="marquee__content" aria-hidden="true">
+                <span>GALERIE PRINCE TAKAMADO GALLERY</span>
+                <span>カナダ大使館高円宮記念ギャラリー</span>
+                <span>GALERIE PRINCE TAKAMADO GALLERY</span>
+                <span>カナダ大使館高円宮記念ギャラリー</span>
+                <span>GALERIE PRINCE TAKAMADO GALLERY</span>
+                <span>カナダ大使館高円宮記念ギャラリー</span>
+                <span>GALERIE PRINCE TAKAMADO GALLERY</span>
+                <span>カナダ大使館高円宮記念ギャラリー</span>
+            </div>
+        </div>
+    </div>
+
+    <script src="artwork.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>
