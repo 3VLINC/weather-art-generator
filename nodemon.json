@@ -1,0 +1,16 @@
+{
+  "watch": ["server.js", "server-svg-generator.js", "server-machiya-generator.js", "Machiya-js/**/*.js"],
+  "ignore": [
+    "svgs/**/*",
+    "node_modules/**/*",
+    "public/**/*",
+    "*.json",
+    "*.md",
+    "*.sh",
+    "WeatherArtGenerator/**/*",
+    "Machiya/**/*"
+  ],
+  "ext": "js",
+  "delay": 1000
+}
+

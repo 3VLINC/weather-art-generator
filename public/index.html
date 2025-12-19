@@ -120,20 +120,21 @@
                 </div>
             </div>
         </div>
-
-        <div class="message" id="message"></div>
         </div>
     </div>
 
     <!-- Centered email dialog, above overlay and main content -->
     <div class="email-form" id="emailForm">
-        <h2 class-"subtitle">天気発想のジェネラティブアートを受け取ろう！</h2>
-        <h3 class-"subtitle">Receive Your Weather Inspired Generative Art!<br>
+        <h2 class="subtitle">天気発想のジェネラティブアートを受け取ろう！</h2>
+        <h3 class="subtitle">Receive Your Weather Inspired Generative Art!<br>
             Recevez votre œuvre générative inspirée par la météo !</h3>
         <!--<p>Enter your email to receive your unique generative artwork as an attachment:</p>-->
         <input type="email" id="emailInput" placeholder="your.email@example.com" required>
         <button id="submitEmailBtn" class="btn">送信 | Send | Envoyer</button>
     </div>
+
+    <!-- Message display (grouped with email-form for high z-index) -->
+    <div class="message" id="message"></div>
 
     <div class="sponsor-logos">
         <img src="img/air-canada-logo.svg" alt="Sponsor 1" class="sponsor-logo">

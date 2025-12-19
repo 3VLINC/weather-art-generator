@@ -322,18 +322,37 @@ canvas {
 }
 
 .message {
-	margin: 1rem 0;
-	padding: 15px;
+	position: fixed;
+	top: 50%;
+	left: 50%;
+	transform: translate(-50%, -50%);
+	z-index: 30; /* Same z-index as email-form to appear above everything */
+	margin: 0;
+	padding: 20px 40px;
 	border-radius: 10px;
 	display: none;
+	max-width: 90%;
+	text-align: center;
+	color: white;
+	font-weight: 500;
+	font-size: 1.5rem; /* Bigger text */
+	box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+	opacity: 0;
+	transition: opacity 0.5s ease; /* Fade transition */
+	pointer-events: none; /* Don't block clicks when fading */
+}
+
+.message.visible {
+	opacity: 1;
+	display: block;
 }
 
 .message.success {
-	background: rgba(76, 175, 80, 0.8);
+	background: rgba(76, 175, 80, 0.9);
 }
 
 .message.error {
-	background: rgba(244, 67, 54, 0.8);
+	background: rgba(244, 67, 54, 0.9);
 }
 
 /* Full-screen dim overlay behind email dialog */

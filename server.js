@@ -4,7 +4,8 @@ const axios = require('axios');
 const nodemailer = require('nodemailer');
 const path = require('path');
 const fs = require('fs');
-const SVGArtGenerator = require('./server-svg-generator');
+// Using Machiya generator instead of old SVG generator
+const ServerMachiyaGenerator = require('./server-machiya-generator');
 require('dotenv').config();
 
 const app = express();
@@ -16,37 +17,22 @@ app.use(express.json({ limit: '10mb' })); // Increase limit for artwork data
 app.use(express.urlencoded({ limit: '10mb', extended: true }));
 app.use(express.static('public'));
 
-// Email transporter setup - try multiple configurations
+// Email transporter setup
 let transporter;
 
-console.log('Email configuration debug:');
-console.log('EMAIL_SERVICE:', process.env.EMAIL_SERVICE);
-console.log('SENDGRID_API_KEY:', process.env.SENDGRID_API_KEY ? 'SET' : 'NOT SET');
-console.log('EMAIL_FROM:', process.env.EMAIL_FROM);
-
 if (process.env.EMAIL_SERVICE === 'sendgrid') {
-  console.log('Using SendGrid configuration');
-  // SendGrid configuration (more reliable than Gmail)
+  // SendGrid configuration
   transporter = nodemailer.createTransport({
-    service: 'SendGrid',
+    host: 'smtp.sendgrid.net',
+    port: 587,
+    secure: false,
     auth: {
       user: 'apikey',
       pass: process.env.SENDGRID_API_KEY
     }
   });
-} else if (process.env.EMAIL_SERVICE === 'gmail') {
-  console.log('Using Gmail configuration');
-  // Gmail configuration
-  transporter = nodemailer.createTransport({
-    service: 'gmail',
-    auth: {
-      user: process.env.EMAIL_USER,
-      pass: process.env.EMAIL_PASS
-    }
-  });
 } else {
-  console.log('Using default Gmail configuration');
-  // Default to Gmail for backward compatibility
+  // Gmail configuration (default)
   transporter = nodemailer.createTransport({
     service: 'gmail',
     auth: {
@@ -71,6 +57,18 @@ app.get('/api/weather', async (req, res) => {
       axios.get(`https://api.openweathermap.org/data/2.5/weather?q=Tokyo,JP&appid=${apiKey}&units=metric`)
     ]);
 
+    // Log actual API responses for debugging
+    console.log('OpenWeather API Response - Ottawa:', {
+      main: ottawaResponse.data.weather[0].main,
+      description: ottawaResponse.data.weather[0].description,
+      id: ottawaResponse.data.weather[0].id
+    });
+    console.log('OpenWeather API Response - Tokyo:', {
+      main: tokyoResponse.data.weather[0].main,
+      description: tokyoResponse.data.weather[0].description,
+      id: tokyoResponse.data.weather[0].id
+    });
+
     const weatherData = {
       ottawa: {
         temperature: ottawaResponse.data.main.temp,
@@ -78,6 +76,8 @@ app.get('/api/weather', async (req, res) => {
         pressure: ottawaResponse.data.main.pressure,
         windSpeed: ottawaResponse.data.wind.speed,
         description: ottawaResponse.data.weather[0].description,
+        main: ottawaResponse.data.weather[0].main, // Add main category
+        id: ottawaResponse.data.weather[0].id, // Add condition ID
         icon: ottawaResponse.data.weather[0].icon
       },
       tokyo: {
@@ -86,6 +86,8 @@ app.get('/api/weather', async (req, res) => {
         pressure: tokyoResponse.data.main.pressure,
         windSpeed: tokyoResponse.data.wind.speed,
         description: tokyoResponse.data.weather[0].description,
+        main: tokyoResponse.data.weather[0].main, // Add main category
+        id: tokyoResponse.data.weather[0].id, // Add condition ID
         icon: tokyoResponse.data.weather[0].icon
       }
     };
@@ -139,19 +141,22 @@ app.post('/api/generate-artwork', async (req, res) => {
     
     console.log('Generated seed:', seed, 'colorVariations:', colorVariations);
     
-    // Generate SVG
-    const svgGenerator = new SVGArtGenerator(weatherData, seed, colorVariations);
-    const svgContent = svgGenerator.generate();
-    console.log('✅ SVG generated, length:', svgContent.length);
+    // Generate SVG using Machiya generator (weather-driven)
+    const machiyaGenerator = new ServerMachiyaGenerator(weatherData, seed, colorVariations);
+    const svgContent = machiyaGenerator.generate();
+    console.log('✅ Machiya SVG generated, length:', svgContent.length);
     
-    // Convert SVG to PNG using sharp
+    // Convert SVG to PNG using sharp - ensure exact dimensions 1080x1350
     let pngBuffer;
     try {
       const sharp = require('sharp');
       pngBuffer = await sharp(Buffer.from(svgContent, 'utf8'))
+        .resize(1080, 1350, {
+          fit: 'fill' // Force exact dimensions without padding
+        })
         .png()
         .toBuffer();
-      console.log('✅ SVG converted to PNG, buffer size:', pngBuffer.length, 'bytes');
+      console.log('✅ SVG converted to PNG (1080x1350), buffer size:', pngBuffer.length, 'bytes');
     } catch (sharpError) {
       console.error('❌ Error converting SVG to PNG with sharp:', sharpError.message);
       // If sharp fails, we can't generate PNG - return error
@@ -275,14 +280,15 @@ app.post('/api/send-artwork', async (req, res) => {
       svgContent = svgData; // Use client-provided SVG
       console.log('✅ Using client-provided SVG');
     } else if (seed && colorVariations && weatherData) {
-      // Generate SVG server-side as fallback
-      console.log('🔄 Generating SVG server-side (p5.SVG not working on client)...');
+      // Generate SVG server-side using Machiya generator
+      console.log('🔄 Generating Machiya SVG server-side...');
       try {
-        const svgGenerator = new SVGArtGenerator(weatherData, seed, colorVariations);
-        svgContent = svgGenerator.generate();
-        console.log('✅ SVG generated server-side, length:', svgContent.length);
+        const machiyaGenerator = new ServerMachiyaGenerator(weatherData, seed, colorVariations);
+        svgContent = machiyaGenerator.generate();
+        console.log('✅ Machiya SVG generated server-side, length:', svgContent.length);
       } catch (error) {
-        console.error('❌ Error generating SVG server-side:', error);
+        console.error('❌ Error generating Machiya SVG server-side:', error);
+        console.error('Error stack:', error.stack);
         svgContent = null;
       }
     }
@@ -326,9 +332,12 @@ app.post('/api/send-artwork', async (req, res) => {
             const sharp = require('sharp');
             const svgBuffer = Buffer.from(svgContent, 'utf8');
             buffer = await sharp(svgBuffer)
+              .resize(1080, 1350, {
+                fit: 'fill' // Force exact dimensions without padding
+              })
               .png()
               .toBuffer();
-            console.log('SVG converted to PNG with sharp, buffer size:', buffer.length, 'bytes');
+            console.log('SVG converted to PNG (1080x1350) with sharp, buffer size:', buffer.length, 'bytes');
           } catch (sharpError) {
             console.error('Error converting SVG to PNG with sharp:', sharpError.message);
             // Don't throw - use artworkDataUrl if available
@@ -392,8 +401,6 @@ app.post('/api/send-artwork', async (req, res) => {
       return res.status(500).json({ error: 'Failed to create artwork attachment' });
     }
     
-    console.log('✅ Buffer ready for email attachment, size:', buffer.length, 'bytes');
-
     const mailOptions = {
       from: process.env.EMAIL_FROM,
       to: email,
@@ -427,7 +434,7 @@ app.post('/api/send-artwork', async (req, res) => {
         <p>Enjoy your unique creation!</p>
         <br/><hr><br/>
 
-        <h2>Merci d’avoir utilisé le générateur d’art météo EEPMON, exclusivement à la Galerie Prince Takamado !</h2>
+        <h2>Merci d'avoir utilisé le générateur d'art météo EEPMON, exclusivement à la Galerie Prince Takamado !</h2>
         <p>Voici votre œuvre générative unique inspirée de la météo à Ottawa et Tokyo.</p>
         
         <h3>Weather Data Used:</h3>
@@ -448,35 +455,57 @@ app.post('/api/send-artwork', async (req, res) => {
       }]
     };
 
-    const timestamp = new Date().toISOString();
-    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-    console.log(`📧 EMAIL SENT - Artwork #${artworkNumber}`);
-    console.log(`   Email: ${email}`);
-    console.log(`   Timestamp: ${timestamp}`);
-    console.log(`   Ottawa: ${weatherData.ottawa.temperature}°C, ${weatherData.ottawa.description}`);
-    console.log(`   Tokyo: ${weatherData.tokyo.temperature}°C, ${weatherData.tokyo.description}`);
-    console.log(`   Total artworks generated: ${artworkNumber}`);
-    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    console.log(`Attempting to send email to ${email}...`);
     
-    await transporter.sendMail(mailOptions);
-    
-    res.json({ 
-      success: true, 
-      message: 'Artwork sent successfully!',
-      trackingId: trackingId // Return tracking ID to client (optional)
-    });
-  } catch (error) {
-    console.error('Email Error:', error.message);
-    console.error('Full error:', error);
-    
-    // Provide more specific error messages
-    if (error.code === 'EAUTH') {
-      res.status(500).json({ error: 'Email authentication failed. Check your Gmail app password.' });
-    } else if (error.code === 'ECONNECTION') {
-      res.status(500).json({ error: 'Email connection failed. Check your internet connection.' });
-    } else {
-      res.status(500).json({ error: `Failed to send email: ${error.message}` });
+    try {
+      const emailResult = await transporter.sendMail(mailOptions);
+      console.log(`✅ Email sent successfully - Artwork #${artworkNumber} to ${email}`);
+      console.log(`   Message ID: ${emailResult.messageId || 'N/A'}`);
+      
+      res.json({ 
+        success: true, 
+        message: 'Artwork sent successfully!',
+        trackingId: trackingId
+      });
+    } catch (sendError) {
+      console.error('❌ Error during sendMail:', sendError.message);
+      console.error('   Error code:', sendError.code);
+      console.error('   Full error:', sendError);
+      
+      // Check for SendGrid specific errors
+      if (sendError.response) {
+        console.error('   SendGrid response:', sendError.response);
+        const responseBody = sendError.response.body || sendError.response;
+        if (responseBody && responseBody.errors) {
+          const errorMessages = responseBody.errors.map(e => e.message || e).join('; ');
+          console.error('   SendGrid errors:', errorMessages);
+          return res.status(500).json({ error: `SendGrid error: ${errorMessages}` });
+        }
+      }
+      
+      throw sendError; // Re-throw to be caught by outer catch
     }
+  } catch (error) {
+    console.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    console.error('❌ EMAIL SENDING FAILED');
+    console.error('Error message:', error.message);
+    console.error('Error code:', error.code);
+    console.error('Error stack:', error.stack);
+    console.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    
+    let errorMessage = `Failed to send email: ${error.message}`;
+    
+    if (error.code === 'EAUTH') {
+      errorMessage = 'Email authentication failed. Check your Gmail app password or SendGrid API key.';
+    } else if (error.code === 'ECONNECTION') {
+      errorMessage = 'Email connection failed. Check your internet connection.';
+    } else if (error.message && error.message.includes('rate limit')) {
+      errorMessage = 'Email rate limit exceeded. Please try again later.';
+    } else if (error.message && error.message.includes('quota')) {
+      errorMessage = 'Email quota exceeded. Please check your SendGrid account limits.';
+    }
+    
+    res.status(500).json({ error: errorMessage });
   }
 });
 

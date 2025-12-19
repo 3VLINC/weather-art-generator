@@ -291,6 +291,7 @@ class WeatherArtApp {
                 hasColorVariations: !!this.currentColorVariations
             });
             
+            console.log('Sending email request...');
             const response = await fetch('/api/send-artwork', {
                 method: 'POST',
                 headers: {
@@ -300,24 +301,43 @@ class WeatherArtApp {
                     email: email,
                     artworkDataUrl: artworkDataUrl,
                     weatherData: this.currentWeatherData,
-                    seed: this.currentSeed, // For server-side SVG generation
-                    colorVariations: this.currentColorVariations // For server-side SVG generation
+                    seed: this.currentSeed,
+                    colorVariations: this.currentColorVariations
                 })
             });
 
-            const result = await response.json();
+            console.log('Response status:', response.status, response.statusText);
+            
+            let result;
+            try {
+                result = await response.json();
+                console.log('Response data:', result);
+            } catch (jsonError) {
+                console.error('Failed to parse response as JSON:', jsonError);
+                const text = await response.text();
+                console.error('Response text:', text);
+                throw new Error('Invalid response from server');
+            }
             
             if (response.ok) {
+                console.log('✅ Email sent successfully!');
                 this.showMessage('Artwork sent successfully! Check your email.', 'success');
                 emailInput.value = '';
                 this.hideEmailForm();
             } else {
-                throw new Error(result.error || 'Failed to send artwork');
+                const errorMsg = result.error || 'Failed to send artwork';
+                console.error('❌ Server error:', errorMsg);
+                this.showMessage(errorMsg, 'error');
             }
             
         } catch (error) {
-            console.error('Error sending artwork:', error);
-            this.showMessage('Error sending artwork. Please try again.', 'error');
+            console.error('❌ Error sending artwork:', error);
+            console.error('Error details:', {
+                message: error.message,
+                stack: error.stack,
+                name: error.name
+            });
+            this.showMessage(`Error sending artwork: ${error.message}. Check console for details.`, 'error');
         } finally {
             this.showLoading(false);
         }
@@ -346,16 +366,29 @@ class WeatherArtApp {
         const messageEl = document.getElementById('message');
         messageEl.textContent = message;
         messageEl.className = `message ${type}`;
-        messageEl.style.display = 'block';
         
-        // Auto-hide after 5 seconds
+        // Show message with fade-in
+        messageEl.style.display = 'block';
+        // Trigger fade-in by adding visible class after display is set
+        setTimeout(() => {
+            messageEl.classList.add('visible');
+        }, 10);
+        
+        // Auto-hide after 5 seconds with fade-out
         setTimeout(() => {
             this.hideMessage();
         }, 5000);
     }
 
     hideMessage() {
-        document.getElementById('message').style.display = 'none';
+        const messageEl = document.getElementById('message');
+        // Remove visible class to trigger fade-out
+        messageEl.classList.remove('visible');
+        
+        // Hide after fade-out completes
+        setTimeout(() => {
+            messageEl.style.display = 'none';
+        }, 500); // Match CSS transition duration
     }
 
     setupInactivityTimer() {
