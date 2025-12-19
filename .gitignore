@@ -1,6 +1,15 @@
-Machiya
-WeatherArtGenerator
-public/vid/Grok-Video*
+Machiya/
+WeatherArtGenerator/
+public/vid/
+*.MOV
+*.mov
+*.mp4
+*.avi
+*.ai
+*.jpeg
+*.jpg
+*.png
+*.svg
 
 # Dependencies
 node_modules/
@@ -17,6 +26,8 @@ yarn-error.log*
 
 .env.backup
 .env.save
+*.backup
+*.save
 
 # Logs
 logs
