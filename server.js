@@ -10,11 +10,36 @@ require('dotenv').config();
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+const BASE_PATH = process.env.BASE_PATH || '';
+console.log('BASE_PATH configured as:', BASE_PATH || '(empty - root deployment)');
 
 // Middleware
 app.use(cors());
 app.use(express.json({ limit: '10mb' })); // Increase limit for artwork data
 app.use(express.urlencoded({ limit: '10mb', extended: true }));
+
+// Serve the main page with BASE_PATH injected (BEFORE static middleware)
+app.get('/', (req, res) => {
+  const htmlPath = path.join(__dirname, 'public', 'index.html');
+  fs.readFile(htmlPath, 'utf8', (err, data) => {
+    if (err) {
+      console.error('Error reading index.html:', err);
+      return res.status(500).send('Error loading page');
+    }
+    
+    // Inject BASE_PATH as <base> tag and script variable
+    const baseHref = BASE_PATH ? (BASE_PATH.endsWith('/') ? BASE_PATH : BASE_PATH + '/') : '/';
+    const baseTag = `<base href="${baseHref}">`;
+    const basePathScript = `<script>window.BASE_PATH = ${JSON.stringify(BASE_PATH)};</script>`;
+    
+    // Insert both tags right after the opening <head> tag (base tag must be first)
+    const modifiedHtml = data.replace('<head>', `<head>\n    ${baseTag}\n    ${basePathScript}`);
+    
+    res.send(modifiedHtml);
+  });
+});
+
+// Static files (after the root route handler)
 app.use(express.static('public'));
 
 // Email transporter setup
@@ -507,11 +532,6 @@ app.post('/api/send-artwork', async (req, res) => {
     
     res.status(500).json({ error: errorMessage });
   }
-});
-
-// Serve the main page
-app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
 app.listen(PORT, () => {

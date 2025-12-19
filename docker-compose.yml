@@ -1,0 +1,27 @@
+services:
+  weather-art-generator:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      platforms:
+        - linux/amd64
+      args:
+        - NODE_ENV=production
+    image: threevl/eepvers-weather:latest
+    platform: linux/amd64
+    ports:
+      - "3000:3000"
+    env_file:
+      - .env
+    volumes:
+      # Persist generated artwork files
+      - ./svgs:/app/svgs
+      - ./artwork-counter.json:/app/artwork-counter.json
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3000/', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 5s
+

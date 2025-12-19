@@ -45,7 +45,7 @@ class WeatherArtApp {
         
         try {
             // Fetch weather data
-            const weatherResponse = await fetch('/api/weather');
+            const weatherResponse = await fetch(`${window.BASE_PATH || ''}/api/weather`);
             if (!weatherResponse.ok) {
                 throw new Error('Failed to fetch weather data');
             }
@@ -58,7 +58,7 @@ class WeatherArtApp {
             
             // Generate artwork on server (SVG first, then rasterized)
             console.log('Requesting server-side artwork generation...');
-            const artworkResponse = await fetch('/api/generate-artwork', {
+            const artworkResponse = await fetch(`${window.BASE_PATH || ''}/api/generate-artwork`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -132,7 +132,7 @@ class WeatherArtApp {
         try {
             // Fetch fresh weather data
             console.log('Fetching fresh weather data...');
-            const response = await fetch('/api/weather');
+            const response = await fetch(`${window.BASE_PATH || ''}/api/weather`);
             if (!response.ok) {
                 throw new Error('Failed to fetch weather data');
             }
@@ -146,7 +146,7 @@ class WeatherArtApp {
             
             // Generate artwork on server (SVG first, then rasterized)
             console.log('Requesting server-side artwork generation...');
-            const artworkResponse = await fetch('/api/generate-artwork', {
+            const artworkResponse = await fetch(`${window.BASE_PATH || ''}/api/generate-artwork`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -292,7 +292,7 @@ class WeatherArtApp {
             });
             
             console.log('Sending email request...');
-            const response = await fetch('/api/send-artwork', {
+            const response = await fetch(`${window.BASE_PATH || ''}/api/send-artwork`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',

@@ -3,7 +3,6 @@ WeatherArtGenerator/
 public/vid/
 *.MOV
 *.mov
-*.mp4
 *.avi
 *.ai
 *.jpeg
