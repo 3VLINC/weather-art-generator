@@ -43,7 +43,13 @@ COPY --chown=appuser:appuser . .
 # Create directories for writable files
 RUN mkdir -p svgs && \
     echo '{"count":0}' > artwork-counter.json && \
+    echo '[]' > artwork-emails.json && \
+    echo '[]' > eepmon-news-subscribers.json && \
     chown -R appuser:appuser /app
+
+# Copy and set up entrypoint script (as root first)
+COPY docker-entrypoint.sh /app/docker-entrypoint.sh
+RUN chmod +x /app/docker-entrypoint.sh
 
 # Switch to non-root user
 USER appuser
@@ -62,5 +68,6 @@ HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
     CMD node -e "require('http').get('http://localhost:3000/', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"
 
 # Start the application
+ENTRYPOINT ["/app/docker-entrypoint.sh"]
 CMD ["node", "server.js"]
 

@@ -96,6 +96,8 @@ Thumbs.db
 
 # Artwork counter file
 artwork-counter.json
+artwork-emails.json
+eepmon-news-subscribers.json
 
 # Generated SVG files
 svgs/

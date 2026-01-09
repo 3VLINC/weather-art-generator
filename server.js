@@ -230,6 +230,9 @@ function hasEmailReceivedArtwork(email) {
   try {
     if (fs.existsSync(EMAIL_TRACKING_FILE)) {
       const data = fs.readFileSync(EMAIL_TRACKING_FILE, 'utf8');
+      if (!data.trim()) {
+        return false;
+      }
       const emails = JSON.parse(data);
       // Check if email exists (case-insensitive)
       return emails.some(entry => entry.email.toLowerCase() === email.toLowerCase());
@@ -248,7 +251,9 @@ function addEmailToTracking(email, trackingId) {
     // Read existing emails if file exists
     if (fs.existsSync(EMAIL_TRACKING_FILE)) {
       const data = fs.readFileSync(EMAIL_TRACKING_FILE, 'utf8');
-      emails = JSON.parse(data);
+      if (data.trim()) {
+        emails = JSON.parse(data);
+      }
     }
     
     // Check if email already exists (shouldn't happen if we check first, but safety check)
@@ -574,7 +579,9 @@ app.post('/api/send-artwork', async (req, res) => {
           // Read existing subscribers if file exists
           if (fs.existsSync(eepmonSubscribersFile)) {
             const fileContent = fs.readFileSync(eepmonSubscribersFile, 'utf8');
-            eepmonSubscribers = JSON.parse(fileContent);
+            if (fileContent.trim()) {
+              eepmonSubscribers = JSON.parse(fileContent);
+            }
           }
           
           // Check if email already exists
