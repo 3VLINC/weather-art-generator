@@ -95,7 +95,13 @@ class CloudGenerator {
     
     // Determine number of clouds based on weather conditions
     let numClouds;
-    if (ottawaCondition === 'CLOUDY' || tokyoCondition === 'CLOUDY' || 
+    if (ottawaCondition === 'FOG' || tokyoCondition === 'FOG') {
+      // Fog/mist/haze = many clouds for atmospheric effect
+      numClouds = Math.floor(this.random(12, 20));
+    } else if (ottawaCondition === 'OVERCAST' || tokyoCondition === 'OVERCAST') {
+      // Overcast = thick gray layer covering sky
+      numClouds = Math.floor(this.random(15, 25));
+    } else if (ottawaCondition === 'CLOUDY' || tokyoCondition === 'CLOUDY' || 
         ottawaCondition === 'RAIN' || tokyoCondition === 'RAIN' ||
         ottawaCondition === 'STORM' || tokyoCondition === 'STORM') {
       // More clouds for cloudy/rainy/stormy conditions
@@ -121,8 +127,12 @@ class CloudGenerator {
       
       // Determine opacity based on weather conditions
       let opacity;
-      if (ottawaCondition === 'FOG' || tokyoCondition === 'FOG') {
-        opacity = this.random(0.3, 0.5); // Lower opacity for fog
+      if (ottawaCondition === 'CLEAR' || tokyoCondition === 'CLEAR') {
+        opacity = this.random(0.03, 0.05); // Very low opacity (3-5%) for clear conditions - subtle white clouds
+      } else if (ottawaCondition === 'FOG' || tokyoCondition === 'FOG') {
+        opacity = this.random(0.25, 0.65); // Lower opacity for fog
+      } else if (ottawaCondition === 'OVERCAST' || tokyoCondition === 'OVERCAST') {
+        opacity = this.random(0.7, 0.95); // High opacity for overcast (thick layer)
       } else if (ottawaCondition === 'STORM' || tokyoCondition === 'STORM') {
         opacity = this.random(0.6, 0.9); // Higher opacity for storms
       } else if (ottawaCondition === 'CLOUDY' || tokyoCondition === 'CLOUDY') {
@@ -130,7 +140,7 @@ class CloudGenerator {
       } else if (ottawaCondition === 'RAIN' || tokyoCondition === 'RAIN') {
         opacity = this.random(0.4, 0.7); // Medium for rain
       } else {
-        opacity = this.random(0.3, 0.6); // Lower for clear/partly cloudy
+        opacity = this.random(0.3, 0.6); // Lower for partly cloudy
       }
       
       // Determine color based on weather conditions
@@ -164,9 +174,10 @@ class CloudGenerator {
       const y = this.random(this.SCRN_H * 0.1, this.SCRN_H * 0.7); // Upper to middle regions
       
       // Scale cloud (vary size for depth effect)
-      const baseScale = this.random(0.4, 1.2);
-      const scaleX = baseScale * this.random(0.9, 1.1);
-      const scaleY = baseScale * this.random(0.9, 1.1);
+      //const baseScale = this.random(0.4, 1.2);
+      const baseScale = this.random(1, 2);
+      const scaleX = baseScale * this.random(0.5, 1.1);
+      const scaleY = baseScale * this.random(0.5, 1.1);
       
       // Optional rotation for variety
       const rotation = this.random(-15, 15);
@@ -211,7 +222,9 @@ class CloudGenerator {
       if (main === 'clouds') {
         // Need description to distinguish between partly cloudy and overcast
         const desc = (description || '').toLowerCase();
-        if (desc.includes('broken') || desc.includes('few') || desc.includes('scattered')) {
+        if (desc.includes('overcast')) {
+          return 'OVERCAST'; // Overcast clouds = thick gray layer
+        } else if (desc.includes('broken') || desc.includes('few') || desc.includes('scattered')) {
           return 'PARTLY_CLOUDY';
         }
         return 'CLOUDY';
@@ -220,6 +233,7 @@ class CloudGenerator {
       if (main === 'snow') return 'SNOW';
       if (main === 'mist' || main === 'fog' || main === 'haze') return 'FOG';
       if (main === 'thunderstorm') return 'STORM';
+      // Note: overcast detection is primarily via condition ID 804
     }
     
     // Last resort: parse description string
@@ -256,10 +270,10 @@ class CloudGenerator {
     }
     
     // Cloud conditions - check for specific types first
-    if (desc.includes('broken clouds') || desc.includes('few clouds') || desc.includes('scattered clouds')) {
+    if (desc.includes('overcast')) {
+      return 'OVERCAST'; // Overcast = thick gray layer covering sky
+    } else if (desc.includes('broken clouds') || desc.includes('few clouds') || desc.includes('scattered clouds')) {
       return 'PARTLY_CLOUDY'; // Broken/few/scattered = partly cloudy
-    } else if (desc.includes('overcast')) {
-      return 'CLOUDY'; // Overcast = fully cloudy
     } else if (desc.includes('cloud')) {
       // Generic cloud - check if it's a partial condition
       if (desc.includes('broken') || desc.includes('few') || desc.includes('scattered')) {
@@ -297,7 +311,7 @@ class CloudGenerator {
     if (id === 801) return 'PARTLY_CLOUDY'; // few clouds: 11-25%
     if (id === 802) return 'PARTLY_CLOUDY'; // scattered clouds: 25-50%
     if (id === 803) return 'PARTLY_CLOUDY'; // broken clouds: 51-84%
-    if (id === 804) return 'CLOUDY'; // overcast clouds: 85-100%
+    if (id === 804) return 'OVERCAST'; // overcast clouds: 85-100% (thick gray layer)
     
     // Default fallback
     return 'PARTLY_CLOUDY';
@@ -307,8 +321,8 @@ class CloudGenerator {
   getConditionColor(condition, alternate = false) {
     const palettes = {
       'CLEAR': {
-        primary: ['#FFD700', '#FFE135', '#ADFF2F', '#9ACD32', '#7CFC00'],
-        secondary: ['#FFA500', '#FF8C00', '#32CD32', '#00FF00', '#90EE90']
+        primary: ['#FFFFFF', '#FFFFFF', '#FFFFFF', '#FFFFFF', '#FFFFFF'], // White for clear conditions
+        secondary: ['#FFFFFF', '#FFFFFF', '#FFFFFF', '#FFFFFF', '#FFFFFF'] // White for clear conditions
       },
       'CLOUDY': {
         // More colorful grays with hints of blue/purple
@@ -338,6 +352,10 @@ class CloudGenerator {
       'PARTLY_CLOUDY': {
         primary: ['#87CEEB', '#B0E0E6', '#E0F6FF', '#F0F8FF', '#E6E6FA'],
         secondary: ['#4682B4', '#5F9EA0', '#ADD8E6', '#D3D3D3', '#F5F5F5']
+      },
+      'OVERCAST': {
+        primary: ['#696969', '#808080', '#A9A9A9', '#778899', '#708090'], // Darker grays for overcast
+        secondary: ['#2F4F4F', '#36454F', '#4F4F4F', '#5F5F5F', '#6B6B6B']
       }
     };
     

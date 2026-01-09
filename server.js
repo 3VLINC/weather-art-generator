@@ -10,36 +10,11 @@ require('dotenv').config();
 
 const app = express();
 const PORT = process.env.PORT || 3000;
-const BASE_PATH = process.env.BASE_PATH || '';
-console.log('BASE_PATH configured as:', BASE_PATH || '(empty - root deployment)');
 
 // Middleware
 app.use(cors());
 app.use(express.json({ limit: '10mb' })); // Increase limit for artwork data
 app.use(express.urlencoded({ limit: '10mb', extended: true }));
-
-// Serve the main page with BASE_PATH injected (BEFORE static middleware)
-app.get('/', (req, res) => {
-  const htmlPath = path.join(__dirname, 'public', 'index.html');
-  fs.readFile(htmlPath, 'utf8', (err, data) => {
-    if (err) {
-      console.error('Error reading index.html:', err);
-      return res.status(500).send('Error loading page');
-    }
-    
-    // Inject BASE_PATH as <base> tag and script variable
-    const baseHref = BASE_PATH ? (BASE_PATH.endsWith('/') ? BASE_PATH : BASE_PATH + '/') : '/';
-    const baseTag = `<base href="${baseHref}">`;
-    const basePathScript = `<script>window.BASE_PATH = ${JSON.stringify(BASE_PATH)};</script>`;
-    
-    // Insert both tags right after the opening <head> tag (base tag must be first)
-    const modifiedHtml = data.replace('<head>', `<head>\n    ${baseTag}\n    ${basePathScript}`);
-    
-    res.send(modifiedHtml);
-  });
-});
-
-// Static files (after the root route handler)
 app.use(express.static('public'));
 
 // Email transporter setup
@@ -207,6 +182,8 @@ app.post('/api/generate-artwork', async (req, res) => {
 
 // Counter file path
 const COUNTER_FILE = path.join(__dirname, 'artwork-counter.json');
+// Email tracking file path
+const EMAIL_TRACKING_FILE = path.join(__dirname, 'artwork-emails.json');
 
 // Initialize or read counter file
 function getCounter() {
@@ -242,11 +219,66 @@ function incrementCounter() {
   }
 }
 
+// Check if email has already received an artwork
+function hasEmailReceivedArtwork(email) {
+  // Exempt eric@eepmon.com from the one artwork rule (for testing)
+  if (email.toLowerCase() === 'eric@eepmon.com') {
+    console.log('ℹ️  Testing email exempted from one artwork rule:', email);
+    return false;
+  }
+  
+  try {
+    if (fs.existsSync(EMAIL_TRACKING_FILE)) {
+      const data = fs.readFileSync(EMAIL_TRACKING_FILE, 'utf8');
+      const emails = JSON.parse(data);
+      // Check if email exists (case-insensitive)
+      return emails.some(entry => entry.email.toLowerCase() === email.toLowerCase());
+    }
+  } catch (error) {
+    console.error('Error reading email tracking file:', error);
+  }
+  return false;
+}
+
+// Add email to tracking file
+function addEmailToTracking(email, trackingId) {
+  try {
+    let emails = [];
+    
+    // Read existing emails if file exists
+    if (fs.existsSync(EMAIL_TRACKING_FILE)) {
+      const data = fs.readFileSync(EMAIL_TRACKING_FILE, 'utf8');
+      emails = JSON.parse(data);
+    }
+    
+    // Check if email already exists (shouldn't happen if we check first, but safety check)
+    const emailExists = emails.some(entry => entry.email.toLowerCase() === email.toLowerCase());
+    
+    if (!emailExists) {
+      // Add new email entry
+      emails.push({
+        email: email,
+        trackingId: trackingId,
+        receivedAt: new Date().toISOString()
+      });
+      
+      // Save to file
+      fs.writeFileSync(EMAIL_TRACKING_FILE, JSON.stringify(emails, null, 2), 'utf8');
+      console.log(`✅ Email added to tracking: ${email}`);
+    } else {
+      console.log(`ℹ️  Email already in tracking file: ${email}`);
+    }
+  } catch (error) {
+    console.error('Error writing email tracking file:', error);
+    // Don't throw - tracking failure shouldn't prevent email sending
+  }
+}
+
 // Email sending endpoint
 app.post('/api/send-artwork', async (req, res) => {
   try {
     console.log('Email request received, body size:', JSON.stringify(req.body).length);
-    const { email, artworkDataUrl, svgData, weatherData, seed, colorVariations } = req.body;
+    const { email, artworkDataUrl, svgData, weatherData, seed, colorVariations, newsletterOptIn, eepmonNewsOptIn } = req.body;
 
     // Log what we received
     console.log('Request data:', {
@@ -269,6 +301,14 @@ app.post('/api/send-artwork', async (req, res) => {
     if (!emailRegex.test(email)) {
       console.log('Invalid email format:', email);
       return res.status(400).json({ error: 'Invalid email format' });
+    }
+
+    // Check if email has already received an artwork
+    if (hasEmailReceivedArtwork(email)) {
+      console.log('Email already received artwork:', email);
+      return res.status(400).json({ 
+        error: 'This email address has already received an artwork. Only one artwork per email address is allowed.' 
+      });
     }
 
     // Check if email configuration is set up
@@ -436,8 +476,8 @@ app.post('/api/send-artwork', async (req, res) => {
         
         <h3>Weather Data Used:</h3>
         <ul>
-          <li><strong>オタワ:</strong> ${weatherData.ottawa.temperature}°C, ${weatherData.ottawa.description}</li>
-          <li><strong>東京:</strong> ${weatherData.tokyo.temperature}°C, ${weatherData.tokyo.description}</li>
+          <li><strong>オタワ:</strong> ${weatherData.ottawa.temperature}°C, 湿度 ${weatherData.ottawa.humidity}%, ${weatherData.ottawa.description}</li>
+          <li><strong>東京:</strong> ${weatherData.tokyo.temperature}°C, 湿度 ${weatherData.tokyo.humidity}%, ${weatherData.tokyo.description}</li>
         </ul>
         
         <p>This artwork was generated using real-time weather data and p5.js generative art algorithms.</p>
@@ -445,13 +485,13 @@ app.post('/api/send-artwork', async (req, res) => {
         <p>Enjoy your unique creation!</p>
         <br/><hr><br/>
 
-        <h2>Thank you for using Weather Art Generator!</h2>
+        <h2>Thank you for coming to my exhibition, Digital Worlds at the Prince Takamado Gallery.</h2>
         <p>Here's your unique digital artwork inspired by the weather in Ottawa and Tokyo.</p>
         
         <h3>Weather Data Used:</h3>
         <ul>
-          <li><strong>Ottawa:</strong> ${weatherData.ottawa.temperature}°C, ${weatherData.ottawa.description}</li>
-          <li><strong>Tokyo:</strong> ${weatherData.tokyo.temperature}°C, ${weatherData.tokyo.description}</li>
+          <li><strong>Ottawa:</strong> ${weatherData.ottawa.temperature}°C, Humidity ${weatherData.ottawa.humidity}%, ${weatherData.ottawa.description}</li>
+          <li><strong>Tokyo:</strong> ${weatherData.tokyo.temperature}°C, Humidity ${weatherData.tokyo.humidity}%, ${weatherData.tokyo.description}</li>
         </ul>
         
         <p>This artwork was generated using real-time weather data and p5.js generative art algorithms.</p>
@@ -464,8 +504,8 @@ app.post('/api/send-artwork', async (req, res) => {
         
         <h3>Weather Data Used:</h3>
         <ul>
-          <li><strong>Ottawa:</strong> ${weatherData.ottawa.temperature}°C, ${weatherData.ottawa.description}</li>
-          <li><strong>Tokyo:</strong> ${weatherData.tokyo.temperature}°C, ${weatherData.tokyo.description}</li>
+          <li><strong>Ottawa:</strong> ${weatherData.ottawa.temperature}°C, Humidité ${weatherData.ottawa.humidity}%, ${weatherData.ottawa.description}</li>
+          <li><strong>Tokyo:</strong> ${weatherData.tokyo.temperature}°C, Humidité ${weatherData.tokyo.humidity}%, ${weatherData.tokyo.description}</li>
         </ul>
         
         <p>This artwork was generated using real-time weather data and p5.js generative art algorithms.</p>
@@ -486,6 +526,80 @@ app.post('/api/send-artwork', async (req, res) => {
       const emailResult = await transporter.sendMail(mailOptions);
       console.log(`✅ Email sent successfully - Artwork #${artworkNumber} to ${email}`);
       console.log(`   Message ID: ${emailResult.messageId || 'N/A'}`);
+      
+      // Add email to tracking file (mark as having received artwork)
+      addEmailToTracking(email, trackingId);
+      
+      // Save email to newsletter list if user opted in
+      if (newsletterOptIn) {
+        try {
+          const subscribersFile = path.join(__dirname, 'newsletter-subscribers.json');
+          let subscribers = [];
+          
+          // Read existing subscribers if file exists
+          if (fs.existsSync(subscribersFile)) {
+            const fileContent = fs.readFileSync(subscribersFile, 'utf8');
+            subscribers = JSON.parse(fileContent);
+          }
+          
+          // Check if email already exists
+          const emailExists = subscribers.some(sub => sub.email.toLowerCase() === email.toLowerCase());
+          
+          if (!emailExists) {
+            // Add new subscriber with timestamp
+            subscribers.push({
+              email: email,
+              subscribedAt: new Date().toISOString(),
+              trackingId: trackingId
+            });
+            
+            // Save to file
+            fs.writeFileSync(subscribersFile, JSON.stringify(subscribers, null, 2), 'utf8');
+            console.log(`✅ Newsletter subscriber added: ${email}`);
+          } else {
+            console.log(`ℹ️  Email already in newsletter list: ${email}`);
+          }
+        } catch (subscriberError) {
+          console.error('⚠️  Error saving newsletter subscriber:', subscriberError.message);
+          // Don't fail the request if newsletter saving fails
+        }
+      }
+      
+      // Save email to EEPMON news list if user opted in
+      if (eepmonNewsOptIn) {
+        try {
+          const eepmonSubscribersFile = path.join(__dirname, 'eepmon-news-subscribers.json');
+          let eepmonSubscribers = [];
+          
+          // Read existing subscribers if file exists
+          if (fs.existsSync(eepmonSubscribersFile)) {
+            const fileContent = fs.readFileSync(eepmonSubscribersFile, 'utf8');
+            eepmonSubscribers = JSON.parse(fileContent);
+          }
+          
+          // Check if email already exists
+          const emailExists = eepmonSubscribers.some(sub => sub.email.toLowerCase() === email.toLowerCase());
+          
+          if (!emailExists) {
+            // Add new subscriber with timestamp and tracking ID (for NFT delivery)
+            eepmonSubscribers.push({
+              email: email,
+              subscribedAt: new Date().toISOString(),
+              trackingId: trackingId,
+              nftEligible: true // Mark as eligible for free NFT
+            });
+            
+            // Save to file
+            fs.writeFileSync(eepmonSubscribersFile, JSON.stringify(eepmonSubscribers, null, 2), 'utf8');
+            console.log(`✅ EEPMON news subscriber added: ${email} (NFT eligible)`);
+          } else {
+            console.log(`ℹ️  Email already in EEPMON news list: ${email}`);
+          }
+        } catch (eepmonError) {
+          console.error('⚠️  Error saving EEPMON news subscriber:', eepmonError.message);
+          // Don't fail the request if EEPMON subscriber saving fails
+        }
+      }
       
       res.json({ 
         success: true, 
@@ -532,6 +646,11 @@ app.post('/api/send-artwork', async (req, res) => {
     
     res.status(500).json({ error: errorMessage });
   }
+});
+
+// Serve the main page
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
 app.listen(PORT, () => {

@@ -45,7 +45,7 @@ class WeatherArtApp {
         
         try {
             // Fetch weather data
-            const weatherResponse = await fetch(`${window.BASE_PATH || ''}/api/weather`);
+            const weatherResponse = await fetch('/api/weather');
             if (!weatherResponse.ok) {
                 throw new Error('Failed to fetch weather data');
             }
@@ -58,7 +58,7 @@ class WeatherArtApp {
             
             // Generate artwork on server (SVG first, then rasterized)
             console.log('Requesting server-side artwork generation...');
-            const artworkResponse = await fetch(`${window.BASE_PATH || ''}/api/generate-artwork`, {
+            const artworkResponse = await fetch('/api/generate-artwork', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -132,7 +132,7 @@ class WeatherArtApp {
         try {
             // Fetch fresh weather data
             console.log('Fetching fresh weather data...');
-            const response = await fetch(`${window.BASE_PATH || ''}/api/weather`);
+            const response = await fetch('/api/weather');
             if (!response.ok) {
                 throw new Error('Failed to fetch weather data');
             }
@@ -146,7 +146,7 @@ class WeatherArtApp {
             
             // Generate artwork on server (SVG first, then rasterized)
             console.log('Requesting server-side artwork generation...');
-            const artworkResponse = await fetch(`${window.BASE_PATH || ''}/api/generate-artwork`, {
+            const artworkResponse = await fetch('/api/generate-artwork', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -267,11 +267,20 @@ class WeatherArtApp {
     }
 
     async sendArtwork() {
+        const submitBtn = document.getElementById('submitEmailBtn');
+        
+        // Disable button immediately to prevent double-clicks/spamming
+        if (submitBtn.disabled) {
+            return; // Already processing, ignore additional clicks
+        }
+        submitBtn.disabled = true;
+        
         const emailInput = document.getElementById('emailInput');
         const email = emailInput.value.trim();
         
         if (!email || !this.isValidEmail(email)) {
             this.showMessage('Please enter a valid email address.', 'error');
+            submitBtn.disabled = false; // Re-enable on validation error
             return;
         }
 
@@ -292,7 +301,10 @@ class WeatherArtApp {
             });
             
             console.log('Sending email request...');
-            const response = await fetch(`${window.BASE_PATH || ''}/api/send-artwork`, {
+            const newsletterOptIn = document.getElementById('newsletterCheckbox').checked;
+            const eepmonNewsOptIn = document.getElementById('eepmonNewsCheckbox').checked;
+            
+            const response = await fetch('/api/send-artwork', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -302,7 +314,9 @@ class WeatherArtApp {
                     artworkDataUrl: artworkDataUrl,
                     weatherData: this.currentWeatherData,
                     seed: this.currentSeed,
-                    colorVariations: this.currentColorVariations
+                    colorVariations: this.currentColorVariations,
+                    newsletterOptIn: newsletterOptIn,
+                    eepmonNewsOptIn: eepmonNewsOptIn
                 })
             });
 
@@ -324,6 +338,11 @@ class WeatherArtApp {
                 this.showMessage('Artwork sent successfully! Check your email.', 'success');
                 emailInput.value = '';
                 this.hideEmailForm();
+                
+                // Return to home screen after a short delay to show success message
+                setTimeout(() => {
+                    this.returnToMainPage();
+                }, 2000); // 2 second delay to show success message
             } else {
                 const errorMsg = result.error || 'Failed to send artwork';
                 console.error('❌ Server error:', errorMsg);
@@ -340,6 +359,11 @@ class WeatherArtApp {
             this.showMessage(`Error sending artwork: ${error.message}. Check console for details.`, 'error');
         } finally {
             this.showLoading(false);
+            // Re-enable button in case of any error (showLoading handles it, but explicit for clarity)
+            const submitBtn = document.getElementById('submitEmailBtn');
+            if (submitBtn) {
+                submitBtn.disabled = false;
+            }
         }
     }
 

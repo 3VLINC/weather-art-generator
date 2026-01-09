@@ -118,3 +118,4 @@ class SlatPanelGroup {
 
 module.exports = SlatPanelGroup;
 
+

@@ -42,12 +42,6 @@
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="styles.css">
-    <!-- BASE_PATH is injected by server.js, fallback to empty string if not set -->
-    <script>
-        if (typeof window.BASE_PATH === 'undefined') {
-            window.BASE_PATH = '';
-        }
-    </script>
 </head>
 <body>
     <video class="bg-video" autoplay muted loop playsinline poster="img/bg-poster.jpg">
@@ -136,6 +130,14 @@
             Recevez votre œuvre générative inspirée par la météo !</h3>
         <!--<p>Enter your email to receive your unique generative artwork as an attachment:</p>-->
         <input type="email" id="emailInput" placeholder="your.email@example.com" required>
+        <label class="newsletter-checkbox">
+            <input type="checkbox" id="eepmonNewsCheckbox">
+            <span>EEPMONからのニュースとこのアートワークの無料NFTを受け取る | Receive news from EEPMON and free NFT of this artwork | Recevoir les actualités d'EEPMON et le NFT gratuit de cette œuvre</span>
+        </label>
+        <label class="newsletter-checkbox">
+            <input type="checkbox" id="newsletterCheckbox">
+            <span>プリンス高円宮ギャラリーからのニュースを受け取る | Receive news from Prince Takamado Gallery | Recevoir les actualités de la Galerie Prince Takamado</span>
+        </label>
         <button id="submitEmailBtn" class="btn">送信 | Send | Envoyer</button>
     </div>
 

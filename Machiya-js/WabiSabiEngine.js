@@ -6,6 +6,9 @@ const VOMoon = require('./VOMoon');
 const VOStarLight = require('./VOStarLight');
 const SlatPanelEngine = require('./SlatPanelEngine');
 const CloudGenerator = require('./CloudGenerator');
+const SnowflakeGenerator = require('./SnowflakeGenerator');
+const RainGenerator = require('./RainGenerator');
+const SakuraBranchGenerator = require('./SakuraBranchGenerator');
 
 class WabiSabiEngine {
   constructor(colors, weatherData, randomFn, screenW = 1080, screenH = 1350) {
@@ -32,7 +35,10 @@ class WabiSabiEngine {
     this.initStarlight();
     this.initMoon();
     this.initCloudGenerator();
+    this.initSnowflakeGenerator();
+    this.initRainGenerator();
     this.initSlatPanelEngine(colors);
+    //this.initSakuraBranchGenerator();
     
     // Initialize gradient background colors based on weather
     this.initGradientBackground();
@@ -48,7 +54,7 @@ class WabiSabiEngine {
     const avgHumidity = (ottawa.humidity + tokyo.humidity) / 2;
     
     // More stars on clear, cold nights; fewer on cloudy/humid days
-    const maxStars = 1000; // Reduced max for better performance
+    const maxStars = 2500; // Reduced max for better performance
     let numStars;
     
     if (avgTemp < 5 && avgHumidity < 50) {
@@ -56,7 +62,7 @@ class WabiSabiEngine {
       numStars = Math.floor(this.random(700, maxStars));
     } else if (avgHumidity > 70) {
       // High humidity = cloudy = fewer stars
-      numStars = Math.floor(this.random(0, 100));
+      numStars = Math.floor(this.random(500, 1000));
     } else {
       // default
       numStars = Math.floor(this.random(100, maxStars));
@@ -91,13 +97,55 @@ class WabiSabiEngine {
     // At night always use glow mode to emulate original layered glowing moon
     const moonMode = isDay ? 0 : 1; // 0=solid (sun), 1=glow (moon)
     // Make moon slightly larger overall
-    const size = this.random(150, 450);
+    const size = this.random(250, 500);
     // Constrain position to ensure moon stays within canvas
     const x = this.random(size/2 + 50, Math.max(size/2 + 50, this.SCRN_W - size/2 - 50));
     const y = this.random(size, Math.min(this.SCRN_H/3, this.SCRN_H - size/2 - 50)); // Keep in upper third
     
-    const colorIndex = Math.floor(this.random(0, this.colors.length));
-    const color = this.colors[colorIndex];
+    // Moon has its own color palette: whites, light blues, to yellows
+    const moonPalette = [
+      // Whites
+      { r: 255, g: 255, b: 255 }, // Pure white
+      { r: 255, g: 250, b: 250 }, // Snow white
+      { r: 248, g: 248, b: 255 }, // Ghost white
+      { r: 245, g: 245, b: 250 }, // White smoke
+      { r: 240, g: 248, b: 255 }, // Alice blue
+      { r: 230, g: 230, b: 250 }, // Lavender blush
+      // Light blues
+      { r: 176, g: 224, b: 230 }, // Powder blue
+      { r: 173, g: 216, b: 230 }, // Light blue
+      { r: 135, g: 206, b: 250 }, // Light sky blue
+      { r: 135, g: 206, b: 235 }, // Sky blue
+      { r: 176, g: 196, b: 222 }, // Light steel blue
+      { r: 175, g: 238, b: 238 }, // Pale turquoise
+      { r: 224, g: 255, b: 255 }, // Light cyan
+      { r: 240, g: 255, b: 255 }, // Azure
+      { r: 230, g: 230, b: 250 }, // Lavender
+      { r: 221, g: 160, b: 221 }, // Plum
+      // Yellows
+      { r: 255, g: 255, b: 224 }, // Light yellow
+      { r: 255, g: 250, b: 205 }, // Lemon chiffon
+      { r: 255, g: 239, b: 213 }, // Papaya whip
+      { r: 255, g: 228, b: 196 }, // Bisque
+      { r: 255, g: 218, b: 185 }, // Peach puff
+      { r: 255, g: 222, b: 173 }, // Navajo white
+      { r: 250, g: 250, b: 210 }, // Beige
+      { r: 255, g: 245, b: 238 }, // Seashell
+      { r: 255, g: 250, b: 240 }, // Floral white
+      { r: 255, g: 255, b: 240 }, // Ivory
+      // Creamy yellows
+      { r: 255, g: 253, b: 208 }, // Light goldenrod yellow
+      { r: 250, g: 250, b: 210 }, // Light yellow-green
+      { r: 255, g: 248, b: 220 }, // Cornsilk
+      { r: 255, g: 239, b: 213 }, // Antique white
+      { r: 255, g: 228, b: 181 }, // Moccasin
+    ];
+    
+    // Randomly select a color from the moon palette
+    const colorIndex = Math.floor(this.random(0, moonPalette.length));
+    const color = moonPalette[colorIndex];
+    
+    console.log(`Moon color selected: RGB(${color.r}, ${color.g}, ${color.b}) from moon palette`);
     
     this.moon = new VOMoon(moonMode, size, x, y, color, isDay, this.random);
   }
@@ -106,38 +154,105 @@ class WabiSabiEngine {
     this.cloudGenerator = new CloudGenerator(this.weatherData, this.random, this.SCRN_W, this.SCRN_H);
   }
   
+  initSnowflakeGenerator() {
+    this.snowflakeGenerator = new SnowflakeGenerator(this.weatherData, this.random, this.SCRN_W, this.SCRN_H);
+  }
+  
+  initRainGenerator() {
+    this.rainGenerator = new RainGenerator(this.weatherData, this.random, this.SCRN_W, this.SCRN_H);
+  }
+  
+  initSakuraBranchGenerator() {
+    this.sakuraBranchGenerator = new SakuraBranchGenerator(this.weatherData, this.random, this.SCRN_W, this.SCRN_H);
+  }
+  
   initSlatPanelEngine(colors) {
     this.spEngine = new SlatPanelEngine(colors, this.weatherData, this.random, this.SCRN_W, this.SCRN_H);
   }
   
   initGradientBackground() {
     const { ottawa, tokyo } = this.weatherData;
-    const avgTemp = (ottawa.temperature + tokyo.temperature) / 2;
-    const timeOfDay = new Date().getHours();
     
-    // Select gradient colors based on temperature and time
-    let color1Index, color2Index;
+    // Get current UTC time
+    const now = new Date();
+    const utcHours = now.getUTCHours();
+    const utcMinutes = now.getUTCMinutes();
+    const utcTime = utcHours + utcMinutes / 60;
     
-    if (timeOfDay >= 5 && timeOfDay < 7) {
-      // Dawn - warm colors
-      color1Index = Math.floor(this.random(0, this.colors.length));
-      color2Index = Math.floor(this.random(0, this.colors.length));
-    } else if (timeOfDay >= 7 && timeOfDay < 17) {
-      // Day - brighter colors
-      color1Index = Math.floor(this.random(0, this.colors.length));
-      color2Index = Math.floor(this.random(0, this.colors.length));
-    } else if (timeOfDay >= 17 && timeOfDay < 19) {
-      // Twilight - cooler colors
-      color1Index = Math.floor(this.random(0, this.colors.length));
-      color2Index = Math.floor(this.random(0, this.colors.length));
-    } else {
-      // Evening/Night - darker colors
-      color1Index = Math.floor(this.random(0, this.colors.length));
-      color2Index = Math.floor(this.random(0, this.colors.length));
-    }
+    // Calculate local time for each city
+    // Ottawa: Eastern Time (EST/EDT) - UTC-5 or UTC-4 (simplified: assume UTC-5 for now)
+    // Tokyo: Japan Standard Time (JST) - UTC+9
+    const ottawaOffset = -5; // EST (could be -4 for EDT, but simplified)
+    const tokyoOffset = 9; // JST
     
-    this.GRAD_BG_1 = this.colors[color1Index];
-    this.GRAD_BG_2 = this.colors[color2Index];
+    const ottawaHours = (utcTime + ottawaOffset + 24) % 24;
+    const tokyoHours = (utcTime + tokyoOffset + 24) % 24;
+    
+    // Helper function to get time period (returns 0-3 for different periods)
+    const getTimePeriod = (hours) => {
+      if (hours >= 5 && hours < 7) return 0; // Dawn
+      if (hours >= 7 && hours < 17) return 1; // Day
+      if (hours >= 17 && hours < 19) return 2; // Twilight
+      return 3; // Evening/Night
+    };
+    
+    const ottawaPeriod = getTimePeriod(ottawaHours);
+    const tokyoPeriod = getTimePeriod(tokyoHours);
+    
+    // Select color indices from temperature-based palette based on time of day
+    // Different time periods use different ranges of the palette
+    const getColorIndexForPeriod = (period, paletteLength) => {
+      let startIndex, endIndex;
+      
+      switch (period) {
+        case 0: // Dawn - use warmer, brighter colors (upper 60% of palette)
+          startIndex = Math.floor(paletteLength * 0.4);
+          endIndex = paletteLength - 1;
+          break;
+        case 1: // Day - use middle to upper range (middle 60% of palette)
+          startIndex = Math.floor(paletteLength * 0.2);
+          endIndex = Math.floor(paletteLength * 0.8);
+          break;
+        case 2: // Twilight - use middle range (middle 50% of palette)
+          startIndex = Math.floor(paletteLength * 0.25);
+          endIndex = Math.floor(paletteLength * 0.75);
+          break;
+        case 3: // Evening/Night - use darker colors (lower 60% of palette)
+          startIndex = 0;
+          endIndex = Math.floor(paletteLength * 0.6);
+          break;
+        default:
+          startIndex = 0;
+          endIndex = paletteLength - 1;
+      }
+      
+      return Math.floor(this.random(startIndex, endIndex + 1));
+    };
+    
+    // Get color indices for each city based on their local time
+    const ottawaColor1Index = getColorIndexForPeriod(ottawaPeriod, this.colors.length);
+    const ottawaColor2Index = getColorIndexForPeriod(ottawaPeriod, this.colors.length);
+    const tokyoColor1Index = getColorIndexForPeriod(tokyoPeriod, this.colors.length);
+    const tokyoColor2Index = getColorIndexForPeriod(tokyoPeriod, this.colors.length);
+    
+    // Blend the colors from both cities (50/50 blend)
+    const blendColors = (color1, color2) => {
+      return {
+        r: Math.round((color1.r + color2.r) / 2),
+        g: Math.round((color1.g + color2.g) / 2),
+        b: Math.round((color1.b + color2.b) / 2)
+      };
+    };
+    
+    // Blend Ottawa and Tokyo colors for gradient
+    this.GRAD_BG_1 = blendColors(
+      this.colors[ottawaColor1Index],
+      this.colors[tokyoColor1Index]
+    );
+    this.GRAD_BG_2 = blendColors(
+      this.colors[ottawaColor2Index],
+      this.colors[tokyoColor2Index]
+    );
   }
   
   initWabiSabiTextures() {
@@ -267,13 +382,22 @@ class WabiSabiEngine {
     // Render moon (behind shoji grids)
     this.renderMoon();
     
+    // Render overcast overlay (if overcast conditions detected)
+    this.renderOvercastOverlay();
+    
     // Render clouds and shoji groups interleaved by depth (Y position)
     this.renderLayeredElements();
+    
+    // Render rain (on top of other elements for visibility)
+    this.renderRain();
     
     // Render abstract overlay (lightweight alternative to Perlin noise)
     const abstractOverlay = this.generateAbstractOverlay();
     this.defsElements = this.defsElements.concat(abstractOverlay.defs);
     this.svgElements = this.svgElements.concat(abstractOverlay.elements);
+    
+    // Render sakura branches at topmost layer (after everything else)
+    this.renderSakuraBranches();
     
     // Build SVG string with proper structure
     // Add clipPath to ensure nothing renders outside bounds
@@ -392,28 +516,83 @@ class WabiSabiEngine {
     }
   }
   
+  // Check if overcast conditions are present
+  isOvercast() {
+    const { ottawa, tokyo } = this.weatherData;
+    
+    // Check condition ID first (most reliable)
+    // ID 804 = overcast clouds (85-100% coverage)
+    if (ottawa.id === 804 || tokyo.id === 804) {
+      return true;
+    }
+    
+    // Check description for "overcast"
+    const ottawaDesc = (ottawa.description || '').toLowerCase();
+    const tokyoDesc = (tokyo.description || '').toLowerCase();
+    
+    if (ottawaDesc.includes('overcast') || tokyoDesc.includes('overcast')) {
+      return true;
+    }
+    
+    return false;
+  }
+  
+  // Render overcast overlay - transparent gray rectangle covering entire canvas
+  renderOvercastOverlay() {
+    if (!this.isOvercast()) {
+      return; // Only render if overcast conditions detected
+    }
+    
+    // Varying opacity between 30% to 60%
+    const opacity = this.random(0.25, 0.5);
+    
+    // Gray color for overcast sky
+    const grayColor = '#808080'; // Medium gray
+    
+    // Full canvas rectangle
+    this.svgElements.push(`  <rect x="0" y="0" width="${this.SCRN_W}" height="${this.SCRN_H}" fill="${grayColor}" opacity="${opacity}"/>`);
+  }
+  
   renderClouds() {
     if (this.cloudGenerator) {
       this.cloudGenerator.addToSVG(this.svgElements);
     }
   }
   
-  // Render clouds and shoji groups interleaved by depth (Y position)
-  renderLayeredElements() {
-    // Collect all elements with their Y positions
-    const layeredElements = [];
-    
-    // Get shoji groups with depth info
-    if (this.spEngine) {
-      const shojiGroups = this.spEngine.getGroupsWithDepth();
-      layeredElements.push(...shojiGroups);
+  renderRain() {
+    if (this.rainGenerator) {
+      this.rainGenerator.addToSVG(this.svgElements);
     }
-    
-    // Get clouds with depth info
-    if (this.cloudGenerator) {
-      const clouds = this.cloudGenerator.getCloudsWithDepth();
-      layeredElements.push(...clouds);
+  }
+  
+  renderSakuraBranches() {
+    if (this.sakuraBranchGenerator) {
+      this.sakuraBranchGenerator.addToSVG(this.svgElements);
     }
+  }
+  
+    // Render clouds and shoji groups interleaved by depth (Y position)
+    renderLayeredElements() {
+      // Collect all elements with their Y positions
+      const layeredElements = [];
+      
+      // Get shoji groups with depth info
+      if (this.spEngine) {
+        const shojiGroups = this.spEngine.getGroupsWithDepth();
+        layeredElements.push(...shojiGroups);
+      }
+      
+      // Get clouds with depth info
+      if (this.cloudGenerator) {
+        const clouds = this.cloudGenerator.getCloudsWithDepth();
+        layeredElements.push(...clouds);
+      }
+      
+      // Get snowflakes with depth info
+      if (this.snowflakeGenerator) {
+        const snowflakes = this.snowflakeGenerator.getSnowflakesWithDepth();
+        layeredElements.push(...snowflakes);
+      }
     
     // Sort by Y position (top to bottom)
     layeredElements.sort((a, b) => a.y - b.y);
@@ -426,6 +605,28 @@ class WabiSabiEngine {
         // Render individual cloud
         const { cloud } = element;
         const { asset, x, y, scaleX, scaleY, rotation, opacity, color } = cloud;
+        
+        const centerX = x;
+        const centerY = y;
+        
+        let transform = `translate(${centerX}, ${centerY})`;
+        if (rotation !== 0) {
+          transform += ` rotate(${rotation})`;
+        }
+        transform += ` scale(${scaleX}, ${scaleY})`;
+        transform += ` translate(${-asset.width / 2}, ${-asset.height / 2})`;
+        
+        this.svgElements.push(`  <g transform="${transform}" opacity="${opacity}">`);
+        
+        for (const path of asset.paths) {
+          this.svgElements.push(`    <path d="${path.d}" fill="${color}"/>`);
+        }
+        
+        this.svgElements.push(`  </g>`);
+      } else if (element.type === 'snowflake') {
+        // Render individual snowflake
+        const { snowflake } = element;
+        const { asset, x, y, scaleX, scaleY, rotation, opacity, color } = snowflake;
         
         const centerX = x;
         const centerY = y;

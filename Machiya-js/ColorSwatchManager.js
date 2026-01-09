@@ -90,6 +90,9 @@ class ColorSwatchManager {
       console.log(`Will interpolate: ${this.ottawaElement} ↔ ${this.tokyoElement}`);
     }
     
+    // Log the color palettes that will be used
+    this.logColorPalettes();
+    
     // Build color data sets for the selected element
     this.buildElementColorData(this.element);
   }
@@ -340,6 +343,97 @@ class ColorSwatchManager {
   
   getElement() {
     return this.element;
+  }
+  
+  // Log the color palettes being used
+  logColorPalettes() {
+    const { ottawa, tokyo } = this.weatherData;
+    const ottawaTemp = ottawa.temperature;
+    const tokyoTemp = tokyo.temperature;
+    const avgTemp = (ottawaTemp + tokyoTemp) / 2;
+    
+    console.log('\n=== COLOR PALETTE SELECTION ===');
+    console.log(`Ottawa: ${ottawaTemp}°C → ${this.selectElementFromTemp(ottawaTemp)}`);
+    console.log(`Tokyo: ${tokyoTemp}°C → ${this.selectElementFromTemp(tokyoTemp)}`);
+    console.log(`Average: ${avgTemp.toFixed(1)}°C → Selected Element: ${this.element}`);
+    
+    // Get the color sets for the selected element
+    const colorSets = {
+      "FIRE": [
+        ["#FF0000", "#FF4500", "#FF6347", "#FF6B00", "#FF8C00", "#FFA500", "#FFD700", "#FFFF00"],
+        ["#DC143C", "#FF1493", "#FF4500", "#FF6347", "#FF7F50", "#FF8C00", "#FFA500", "#FFB347"],
+        ["#8B0000", "#A52A2A", "#B22222", "#DC143C", "#FF0000", "#FF4500", "#FF6347", "#FF7F50"],
+        ["#FF4500", "#FF6347", "#FF7F50", "#FF8C00", "#FFA500", "#FFD700", "#FFFF00", "#FFE135"]
+      ],
+      "HOT": [
+        ["#FF8C00", "#FFA500", "#FFB347", "#FFD700", "#FFE135", "#FFF44F", "#FFE4B5", "#FFDAB9"],
+        ["#FF7F50", "#FF6347", "#FF8C00", "#FFA500", "#FFB347", "#FFD700", "#FFE135", "#FFF44F"],
+        ["#FF6B35", "#F7931E", "#FFD23F", "#FF6B00", "#FF8C00", "#FFA500", "#FFB347", "#FFD700"],
+        ["#FFA500", "#FFB347", "#FFD700", "#FFE135", "#FFF44F", "#FFE4B5", "#FFDAB9", "#FFEFD5"]
+      ],
+      "WARM": [
+        ["#FFD700", "#FFE135", "#FFF44F", "#FFE4B5", "#FFDAB9", "#FFEFD5", "#FFF8DC", "#F5DEB3"],
+        ["#FFB347", "#FFD700", "#FFE135", "#FFF44F", "#FFE4B5", "#FFDAB9", "#FFEFD5", "#FFF8DC"],
+        ["#FFA500", "#FFB347", "#FFD700", "#FFE135", "#FFF44F", "#FFE4B5", "#FFDAB9", "#FFEFD5"],
+        ["#FFE4B5", "#FFDAB9", "#FFEFD5", "#FFF8DC", "#F5DEB3", "#DEB887", "#D2B48C", "#BC8F8F"]
+      ],
+      "COOL": [
+        ["#87CEEB", "#B0E0E6", "#ADD8E6", "#E0F6FF", "#F0F8FF", "#F5FFFA", "#E6E6FA", "#E0E0FF"],
+        ["#4682B4", "#5F9EA0", "#87CEEB", "#B0E0E6", "#ADD8E6", "#E0F6FF", "#F0F8FF", "#F5FFFA"],
+        ["#1E90FF", "#00BFFF", "#87CEEB", "#B0E0E6", "#ADD8E6", "#E0F6FF", "#F0F8FF", "#E6E6FA"],
+        ["#B0E0E6", "#ADD8E6", "#E0F6FF", "#F0F8FF", "#F5FFFA", "#E6E6FA", "#E0E0FF", "#F8F8FF"]
+      ],
+      "COLD": [
+        ["#4682B4", "#5F9EA0", "#20B2AA", "#00CED1", "#48D1CC", "#40E0D0", "#7B68EE", "#9370DB"],
+        ["#1E90FF", "#00BFFF", "#87CEEB", "#4682B4", "#5F9EA0", "#20B2AA", "#00CED1", "#48D1CC"],
+        ["#0000CD", "#191970", "#000080", "#4169E1", "#6495ED", "#7B68EE", "#9370DB", "#8A2BE2"],
+        ["#708090", "#778899", "#B0C4DE", "#C0C0C0", "#D3D3D3", "#DCDCDC", "#E0E0E0", "#F5F5F5"]
+      ],
+      "FREEZING": [
+        ["#0000CD", "#191970", "#000080", "#4169E1", "#6495ED", "#7B68EE", "#9370DB", "#8A2BE2"],
+        ["#00FFFF", "#00CED1", "#48D1CC", "#40E0D0", "#00FA9A", "#00FF7F", "#3CB371", "#2E8B57"],
+        ["#1E3A8A", "#1E40AF", "#2563EB", "#3B82F6", "#60A5FA", "#93C5FD", "#DBEAFE", "#EFF6FF"],
+        ["#B0C4DE", "#C0C0C0", "#D3D3D3", "#DCDCDC", "#E0E0E0", "#F5F5F5", "#F8F8FF", "#FFFFFF"]
+      ],
+      "FROSTBITE": [
+        ["#000080", "#191970", "#000033", "#000066", "#000099", "#0000CC", "#0000FF", "#1E3A8A"],
+        ["#008B8B", "#00CED1", "#48D1CC", "#20B2AA", "#008080", "#00FFFF", "#40E0D0", "#00CED1"],
+        ["#1E3A8A", "#1E40AF", "#2563EB", "#3B82F6", "#60A5FA", "#93C5FD", "#DBEAFE", "#EFF6FF"],
+        ["#708090", "#778899", "#B0C4DE", "#C0C0C0", "#D3D3D3", "#DCDCDC", "#E0E0E0", "#F5F5F5"]
+      ],
+      "SUPERFROSTBITE": [
+        ["#000033", "#000066", "#000099", "#0000CC", "#000080", "#191970", "#0000FF", "#1E3A8A"],
+        ["#4B0082", "#6A0DAD", "#8B008B", "#9400D3", "#9932CC", "#BA55D3", "#DA70D6", "#DDA0DD"],
+        ["#2F4F4F", "#36454F", "#708090", "#778899", "#B0C4DE", "#C0C0C0", "#D3D3D3", "#DCDCDC"],
+        ["#1C1C1C", "#2F2F2F", "#404040", "#525252", "#696969", "#808080", "#A9A9A9", "#C0C0C0"]
+      ],
+      "EXTREMEFREEZE": [
+        ["#000011", "#000022", "#000033", "#000044", "#000055", "#000066", "#000077", "#000088"],
+        ["#2E0854", "#4B0082", "#6A0DAD", "#8B008B", "#9400D3", "#9932CC", "#BA55D3", "#DA70D6"],
+        ["#1A1A2E", "#16213E", "#0F3460", "#533483", "#2F4F4F", "#36454F", "#708090", "#778899"],
+        ["#000000", "#0A0A0A", "#141414", "#1E1E1E", "#282828", "#323232", "#3C3C3C", "#464646"]
+      ],
+      "ABSOLUTEFREEZE": [
+        ["#000000", "#000011", "#000022", "#000033", "#000044", "#000055", "#000066", "#000077"],
+        ["#1A0033", "#2E0854", "#4B0082", "#6A0DAD", "#8B008B", "#9400D3", "#9932CC", "#BA55D3"],
+        ["#000000", "#0A0A0A", "#141414", "#1A1A2E", "#16213E", "#0F3460", "#533483", "#2F4F4F"],
+        ["#000000", "#050505", "#0A0A0A", "#0F0F0F", "#141414", "#191919", "#1E1E1E", "#232323"]
+      ]
+    };
+    
+    if (this.ottawaElement && this.tokyoElement && this.ottawaElement !== this.tokyoElement) {
+      console.log(`\nInterpolating between:`);
+      console.log(`  Ottawa (${this.ottawaElement}):`, colorSets[this.ottawaElement] ? colorSets[this.ottawaElement][0].join(', ') : 'N/A');
+      console.log(`  Tokyo (${this.tokyoElement}):`, colorSets[this.tokyoElement] ? colorSets[this.tokyoElement][0].join(', ') : 'N/A');
+    } else {
+      const elementColors = colorSets[this.element] || colorSets["COOL"];
+      console.log(`\nUsing ${this.element} color palettes (4 swatches available):`);
+      elementColors.forEach((swatch, i) => {
+        console.log(`  Swatch ${i + 1}:`, swatch.join(', '));
+      });
+    }
+    console.log(`\nOne swatch will be randomly selected and expanded to 256 colors for the artwork.`);
+    console.log('================================\n');
   }
 }
 

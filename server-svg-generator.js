@@ -120,18 +120,45 @@ class SVGArtGenerator {
     this.svgElements.push(element);
   }
 
-  // Generate background
+  // Generate background with time-of-day based colors
   generateBackground() {
-    // Clamp colorVariations.background to ensure reasonable values
-    const bgVariation = Math.max(0.5, Math.min(1.5, this.colorVariations.background || 1.0));
+    const timeOfDay = new Date().getHours();
+    const { ottawa, tokyo } = this.weatherData;
+    const avgTemp = (ottawa.temperature + tokyo.temperature) / 2;
     
-    // Calculate RGB values and clamp to valid range (0-255)
-    const bgR = Math.max(0, Math.min(255, Math.floor(240 * bgVariation)));
-    const bgG = Math.max(0, Math.min(255, Math.floor(245 * bgVariation)));
-    const bgB = Math.max(0, Math.min(255, Math.floor(250 * bgVariation)));
+    // Determine base colors based on time of day
+    let bgR, bgG, bgB;
+    
+    if (timeOfDay >= 5 && timeOfDay < 7) {
+      // Dawn - warm oranges/pinks
+      bgR = Math.floor(this.random(200, 255));
+      bgG = Math.floor(this.random(150, 200));
+      bgB = Math.floor(this.random(100, 150));
+    } else if (timeOfDay >= 7 && timeOfDay < 17) {
+      // Day - bright blues/whites
+      bgR = Math.floor(this.random(200, 255));
+      bgG = Math.floor(this.random(220, 255));
+      bgB = Math.floor(this.random(240, 255));
+    } else if (timeOfDay >= 17 && timeOfDay < 19) {
+      // Twilight - cooler purples/blues
+      bgR = Math.floor(this.random(100, 150));
+      bgG = Math.floor(this.random(120, 180));
+      bgB = Math.floor(this.random(180, 220));
+    } else {
+      // Evening/Night - dark blues/purples
+      bgR = Math.floor(this.random(20, 60));
+      bgG = Math.floor(this.random(30, 70));
+      bgB = Math.floor(this.random(50, 100));
+    }
+    
+    // Apply colorVariations for slight variation
+    const bgVariation = Math.max(0.5, Math.min(1.5, this.colorVariations.background || 1.0));
+    bgR = Math.max(0, Math.min(255, Math.floor(bgR * bgVariation)));
+    bgG = Math.max(0, Math.min(255, Math.floor(bgG * bgVariation)));
+    bgB = Math.max(0, Math.min(255, Math.floor(bgB * bgVariation)));
     
     const bgColor = this.rgbToHex(bgR, bgG, bgB);
-    console.log('SVG Background color:', { bgVariation, bgR, bgG, bgB, bgColor });
+    console.log('SVG Background color (time-based):', { timeOfDay, bgR, bgG, bgB, bgColor });
     
     return `<rect x="0" y="0" width="${this.fullWidth}" height="${this.fullHeight}" fill="${bgColor}"/>`;
   }
@@ -187,12 +214,30 @@ class SVGArtGenerator {
     const brightVariation = this.random(0.9, 1.1);
     // Now the random sequence is aligned with the canvas version
 
-    // Calculate background color for SVG element attribute (fallback)
-    // Use the provided colorVariations.background, clamped to safe range
+    // Calculate background color for SVG element attribute (time-based)
+    // The generateBackground() method will handle time-of-day colors
+    // This is just for the SVG style attribute fallback
+    const timeOfDay = new Date().getHours();
+    let bgR, bgG, bgB;
+    
+    if (timeOfDay >= 5 && timeOfDay < 7) {
+      // Dawn
+      bgR = 220; bgG = 175; bgB = 125;
+    } else if (timeOfDay >= 7 && timeOfDay < 17) {
+      // Day
+      bgR = 240; bgG = 245; bgB = 250;
+    } else if (timeOfDay >= 17 && timeOfDay < 19) {
+      // Twilight
+      bgR = 125; bgG = 150; bgB = 200;
+    } else {
+      // Evening/Night
+      bgR = 40; bgG = 50; bgB = 75;
+    }
+    
     const bgVariation = Math.max(0.5, Math.min(1.5, this.colorVariations.background || 1.0));
-    const bgR = Math.max(0, Math.min(255, Math.floor(240 * bgVariation)));
-    const bgG = Math.max(0, Math.min(255, Math.floor(245 * bgVariation)));
-    const bgB = Math.max(0, Math.min(255, Math.floor(250 * bgVariation)));
+    bgR = Math.max(0, Math.min(255, Math.floor(bgR * bgVariation)));
+    bgG = Math.max(0, Math.min(255, Math.floor(bgG * bgVariation)));
+    bgB = Math.max(0, Math.min(255, Math.floor(bgB * bgVariation)));
     const bgColorHex = this.rgbToHex(bgR, bgG, bgB);
     
     // Set background color on SVG element itself to prevent black backgrounds during rendering
@@ -211,6 +256,8 @@ class SVGArtGenerator {
     this.drawWindPatterns(ottawa, tokyo);
     this.drawUniqueElements(ottawa, tokyo);
     this.drawPerlinNoisePatterns(ottawa, tokyo); // Add Perlin noise patterns
+    this.drawStars(ottawa, tokyo); // Add weather-based stars
+    this.drawTimeBasedDarkOverlay(); // Add black overlay for night time
 
     // Add all elements
     svg += this.svgElements.join('\n');
@@ -434,6 +481,100 @@ class SVGArtGenerator {
 
   map(value, start1, stop1, start2, stop2) {
     return start2 + (stop2 - start2) * ((value - start1) / (stop1 - start1));
+  }
+  
+  // Calculate dark overlay opacity based on time of day
+  // Returns opacity from 0.0 (day) to 1.0 (night)
+  getTimeBasedDarkness() {
+    const timeOfDay = new Date().getHours();
+    const minutes = new Date().getMinutes();
+    const timeDecimal = timeOfDay + minutes / 60; // Convert to decimal hours (e.g., 18.5 = 6:30 PM)
+    
+    // Night: 20:00 (8 PM) to 05:00 (5 AM) - 75-100% opacity
+    if (timeDecimal >= 20 || timeDecimal < 5) {
+      // Full night: 22:00-04:00 = 100% opacity (fully black)
+      if (timeDecimal >= 22 || timeDecimal < 4) {
+        return 1.0;
+      }
+      // Transition periods: 20:00-22:00 and 04:00-05:00
+      if (timeDecimal >= 20) {
+        // 20:00-22:00: transition from 0.75 to 1.0
+        return 0.75 + ((timeDecimal - 20) / 2) * 0.25;
+      } else {
+        // 04:00-05:00: transition from 1.0 to 0.75
+        return 1.0 - ((timeDecimal - 4) / 1) * 0.25;
+      }
+    }
+    
+    // Dawn: 05:00-07:00 - transition from 75% to 0%
+    if (timeDecimal >= 5 && timeDecimal < 7) {
+      const progress = (timeDecimal - 5) / 2; // 0 to 1
+      return 0.75 * (1 - progress);
+    }
+    
+    // Day: 07:00-17:00 - 0% opacity (bright)
+    if (timeDecimal >= 7 && timeDecimal < 17) {
+      return 0.0;
+    }
+    
+    // Twilight: 17:00-20:00 - transition from 0% to 75%
+    if (timeDecimal >= 17 && timeDecimal < 20) {
+      const progress = (timeDecimal - 17) / 3; // 0 to 1
+      return 0.75 * progress;
+    }
+    
+    return 0.0; // Default fallback
+  }
+  
+  // Render black overlay rectangle with time-based opacity
+  drawTimeBasedDarkOverlay() {
+    const opacity = this.getTimeBasedDarkness();
+    
+    // Only render if there's any darkness
+    if (opacity > 0) {
+      this.addElement(this.rect(0, 0, this.fullWidth, this.fullHeight, this.rgbToHex(0, 0, 0), null, 0, opacity));
+    }
+  }
+  
+  // Draw weather-based stars (more stars on clear nights, fewer on cloudy days)
+  drawStars(ottawa, tokyo) {
+    const avgTemp = (ottawa.temperature + tokyo.temperature) / 2;
+    const avgHumidity = (ottawa.humidity + tokyo.humidity) / 2;
+    const timeOfDay = new Date().getHours();
+    
+    // Determine number of stars based on weather and time
+    let numStars;
+    const maxStars = 1000;
+    
+    // Night time (after 7 PM or before 7 AM) with clear conditions = many stars
+    const isNight = timeOfDay >= 19 || timeOfDay < 7;
+    
+    if (isNight && avgTemp < 5 && avgHumidity < 50) {
+      // Clear, cold night = many stars
+      numStars = Math.floor(this.random(700, maxStars));
+    } else if (avgHumidity > 70) {
+      // High humidity = cloudy = fewer stars
+      numStars = Math.floor(this.random(0, 100));
+    } else if (isNight) {
+      // Night but not perfect conditions
+      numStars = Math.floor(this.random(200, 600));
+    } else {
+      // Day time - fewer stars (some might still be visible)
+      numStars = Math.floor(this.random(0, 50));
+    }
+    
+    // Generate stars
+    const starColor = this.rgbToHex(255, 255, 255);
+    for (let i = 0; i < numStars; i++) {
+      const x = this.random(0, this.fullWidth);
+      const y = this.random(0, this.fullHeight);
+      const size = this.random(1, 3);
+      const opacity = this.random(0.3, 1.0);
+      
+      this.addElement(this.ellipse(x, y, size, size, starColor, null, 0, opacity));
+    }
+    
+    console.log(`Generated ${numStars} stars based on weather (temp: ${avgTemp.toFixed(1)}°C, humidity: ${avgHumidity.toFixed(1)}%, time: ${timeOfDay}:00)`);
   }
   
   // Draw Perlin noise-based patterns for organic, natural-looking effects

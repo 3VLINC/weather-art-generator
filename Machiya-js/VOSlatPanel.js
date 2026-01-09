@@ -31,3 +31,4 @@ class VOSlatPanel extends ValueObject {
 module.exports = VOSlatPanel;
 
 
+

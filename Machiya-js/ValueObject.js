@@ -16,3 +16,4 @@ class ValueObject {
 module.exports = ValueObject;
 
 
+

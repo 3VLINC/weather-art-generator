@@ -17,7 +17,29 @@ class VOMoon extends ValueObject {
   }
   
   addToSVG(svgElements) {
-    const colorHex = this.rgbToHex(this.c.r, this.c.g, this.c.b);
+    // Brighten the moon color to ensure it's always visible and bright
+    // Calculate brightness (luminance) and increase if too dark
+    const brightness = (this.c.r * 0.299 + this.c.g * 0.587 + this.c.b * 0.114) / 255;
+    let brightR = this.c.r;
+    let brightG = this.c.g;
+    let brightB = this.c.b;
+    
+    // If brightness is below 0.5 (50%), brighten the color
+    if (brightness < 0.5) {
+      // Increase brightness by scaling towards white
+      const minBrightness = 0.6; // Target minimum brightness of 60%
+      const scale = minBrightness / brightness;
+      brightR = Math.min(255, Math.floor(this.c.r * scale));
+      brightG = Math.min(255, Math.floor(this.c.g * scale));
+      brightB = Math.min(255, Math.floor(this.c.b * scale));
+    }
+    
+    // Ensure minimum RGB values for a bright moon (at least 150 for each channel)
+    brightR = Math.max(150, brightR);
+    brightG = Math.max(150, brightG);
+    brightB = Math.max(150, brightB);
+    
+    const colorHex = this.rgbToHex(brightR, brightG, brightB);
     // Always draw a glowing moon using layered circles, matching original Processing sketch
     // color moonGlow = color(c, 25);
     // fill(moonGlow);
